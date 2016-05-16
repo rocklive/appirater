@@ -223,13 +223,32 @@ static BOOL _alwaysUseMainBundle = NO;
 
 - (BOOL)connectedToNetwork {
     // Create zero addy
-    struct sockaddr_in zeroAddress;
-    bzero(&zeroAddress, sizeof(zeroAddress));
-    zeroAddress.sin_len = sizeof(zeroAddress);
-    zeroAddress.sin_family = AF_INET;
+ 	typedef union
+    {
+        struct sockaddr_in6 ipv6;
+        struct sockaddr_in  ipv4;
+        struct sockaddr     base;
+    } USocketAddress;
+    
+    USocketAddress address;
+    
+    NSOperatingSystemVersion operatingSytemVersion = [[NSProcessInfo processInfo] operatingSystemVersion];
+    if (operatingSytemVersion.majorVersion >= 9) {
+        struct sockaddr_in6 ipv6_address;
+        bzero(&ipv6_address, sizeof(ipv6_address));
+        ipv6_address.sin6_len = sizeof(ipv6_address);
+        ipv6_address.sin6_family = AF_INET6;
+        address.ipv6 = ipv6_address;
+    } else {
+        struct sockaddr_in ipv4_address;
+        bzero(&ipv4_address, sizeof(ipv4_address));
+        ipv4_address.sin_len = sizeof(ipv4_address);
+        ipv4_address.sin_family = AF_INET;
+        address.ipv4 = ipv4_address;
+    }
 	
     // Recover reachability flags
-    SCNetworkReachabilityRef defaultRouteReachability = SCNetworkReachabilityCreateWithAddress(NULL, (struct sockaddr *)&zeroAddress);
+    SCNetworkReachabilityRef defaultRouteReachability = SCNetworkReachabilityCreateWithAddress(NULL, (struct sockaddr *)&address);
     SCNetworkReachabilityFlags flags;
 	
     Boolean didRetrieveFlags = SCNetworkReachabilityGetFlags(defaultRouteReachability, &flags);
